@@ -23,30 +23,34 @@ void RefactorHandler::run(const MatchFinder::MatchResult &Result) {
     auto& Diag = Result.Context->getDiagnostics();
     auto& SM = *Result.SourceManager; // Получаем SourceManager для проверки isInMainFile
     
-    if (const auto *Dtor = Result.Nodes.getNodeAs<CXXDestructorDecl>("classDecl")) {
+    if (const auto *Dtor = Result.Nodes.getNodeAs<CXXDestructorDecl>(NON_VIRTUAL_DTOR_TAG)) {
         handle_nv_dtor(Dtor, Diag, SM);
     }
 
-    if (const auto *Method = Result.Nodes.getNodeAs<CXXMethodDecl>("methodDecl");
+    if (const auto *Method = Result.Nodes.getNodeAs<CXXMethodDecl>(MISSING_OVERRIDE_TAG);
         Method && Method->size_overridden_methods() > 0 && !Method->hasAttr<OverrideAttr>()) {
         handle_miss_override(Method, Diag, SM);
     }
 
-    if (const auto *LoopVar = Result.Nodes.getNodeAs<VarDecl>("VarDecl")) {
+    if (const auto *LoopVar = Result.Nodes.getNodeAs<VarDecl>(NO_REF_IN_LOOP_TAG)) {
         handle_crange_for(LoopVar, Diag, SM);
     }
 }
 
-//todo: необходимо реализовать обработку случая невиртуального деструктора
-void RefactorHandler::handle_nv_dtor(const CXXDestructorDecl *Dtor,
-                            DiagnosticsEngine &Diag,
-                            SourceManager &SM) {
-    //Реализуйте Ваш код ниже
-    const unsigned DiagID = Diag.getCustomDiagID(
-            DiagnosticsEngine::Remark,
-            "Объявлен деструктор"
-        );
-    Diag.Report(Dtor->getLocation(), DiagID);
+void RefactorHandler::handle_nv_dtor(const CXXDestructorDecl* Dtor, DiagnosticsEngine &Diag, SourceManager &SM) {
+    if (!Dtor) {
+        return;
+    }
+
+    // Make sure it is in main file
+    if (!SM.isInMainFile(Dtor->getLocation())) {
+        return;
+    }
+
+    // Check that destructor is of base class that has derived classes
+
+
+    //Find position for inserting virtual kw (before ~)
 }
 
 //todo: необходимо реализовать обработку случая отсутствие override
@@ -82,22 +86,51 @@ void RefactorHandler::handle_crange_for(const VarDecl *LoopVar,
         return cxxRecordDecl().bind("classDecl");
     }
 */
-auto NvDtorMatcher()
-{
-    //todo: замените код ниже, на свою реализацию, необходимо реализовать матчеры для поиска невиртуальных деструкторов
-    return cxxDestructorDecl().bind("classDecl");
+internal::Matcher<Decl> NvDtorMatcher() {
+    //Match any non-v destructor declaration
+    return cxxDestructorDecl(
+        isDefinition(),
+        unless(isImplicit()),
+        unless(isVirtual())
+    ).bind(NON_VIRTUAL_DTOR_TAG);
 }
 
-auto NoOverrideMatcher()
-{
-    //todo: замените код ниже, на свою реализацию, необходимо реализовать матчеры для поиска методов без override
-    return cxxMethodDecl().bind("methodDecl");
+internal::Matcher<Decl> IsBaseClassWithNvDtorMatcher() {
+    return cxxRecordDecl(
+        hasDirectBase(hasType(cxxRecordDecl(has(NvDtorMatcher()))))
+    );
 }
 
-auto NoRefConstVarInRangeLoopMatcher()
-{
-    //todo: замените код ниже, на свою реализацию, необходимо реализовать матчеры для поиска range-for без &
-    return varDecl().bind("VarDecl");
+internal::Matcher<Decl> NoOverrideMatcher() {
+    return cxxMethodDecl(
+        isOverride(),
+        unless(hasAttr(attr::Override))
+    ).bind(MISSING_OVERRIDE_TAG);
+}
+
+internal::BindableMatcher<Stmt> NoRefConstVarInRangeLoopMatcher() {
+    return cxxForRangeStmt(
+      hasLoopVariable(
+          varDecl(
+            hasType(qualType(isConstQualified())),
+            unless(hasType(referenceType())),
+            unless(hasType(builtinType()))
+          ).bind(NO_REF_IN_LOOP_TAG)
+      )
+    );
+
+    // cxxForRangeStmt(
+    //     hasLoopVariable(
+    //         varDecl(
+    //             hasType(
+    //                 qualType(
+    //                     isConstQualified(),
+    //                     unless(referenceType()),
+    //                     unless(builtinType())
+    //                 )
+    //             )).bind(NO_REF_IN_LOOP_TAG)
+    //     )
+    //  );
 }
 
 // Конструктор принимает Rewriter для изменения кода.
@@ -133,19 +166,4 @@ void CodeRefactorAction::EndSourceFileAction() {
     if (RewriterForCodeRefactor.overwriteChangedFiles()) {
         llvm::errs() << "Error applying changes to files.\n";
     }
-}
-
-
-int main(int argc, const char **argv) {
-    // Парсер опций: Обрабатывает флаги командной строки, компиляционные базы данных.
-    auto ExpectedParser = CommonOptionsParser::create(argc, argv, ToolCategory);
-    if (!ExpectedParser) {
-        llvm::errs() << ExpectedParser.takeError();
-        return 1;
-    }
-    CommonOptionsParser &OptionsParser = ExpectedParser.get();
-    // Создаем ClangTool
-    ClangTool Tool(OptionsParser.getCompilations(), OptionsParser.getSourcePathList());
-    // Запускаем RefactorAction.
-    return Tool.run(newFrontendActionFactory<CodeRefactorAction>().get());
 }

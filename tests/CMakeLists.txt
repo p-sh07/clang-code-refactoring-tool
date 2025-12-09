@@ -32,9 +32,36 @@ FetchContent_MakeAvailable(googletest)
 # Рекурсивно ищем все используемые в тестах .cpp файлы
 file(GLOB TEST_SRC_FILES "${CMAKE_SOURCE_DIR}/tests/*.cpp")
 
-add_executable(${PROJECT_NAME}_tests "${TEST_SRC_FILES}")
-target_link_libraries(${PROJECT_NAME}_tests PRIVATE gtest_main)
-target_include_directories(${PROJECT_NAME}_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+add_executable(${PROJECT_NAME}_tests
+        "${CMAKE_SOURCE_DIR}/src/RefactorTool.cpp"
+        "${TEST_SRC_FILES}"
+)
+
+#target_link_libraries(${PROJECT_NAME}_tests PRIVATE gtest_main)
+#TODO: didn't compile without these
+target_link_libraries(
+        refactor_tool_tests
+        PRIVATE
+        GTest::gtest
+        GTest::gtest_main
+        # Clang libraries
+        clangTooling
+        clangFrontend
+        clangASTMatchers
+        clangAST
+        clangBasic
+        clangLex
+        clangRewrite
+        clangSerialization
+        clangDriver
+        clangParse
+        clangSema
+)
+
+target_include_directories(${PROJECT_NAME}_tests PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/include
+)
 
 
 include(GoogleTest)

@@ -59,3 +59,13 @@ public:
 private:
   clang::Rewriter RewriterForCodeRefactor;
 };
+
+//======== Matcher decls to use in tests directly =======
+static constexpr std::string NON_VIRTUAL_DTOR_TAG = "nonVDtor";
+static constexpr std::string MISSING_OVERRIDE_TAG = "missingOverride";
+static constexpr std::string NO_REF_IN_LOOP_TAG   = "loopVar";
+
+clang::ast_matchers::internal::Matcher<clang::Decl> NvDtorMatcher();
+clang::ast_matchers::internal::Matcher<clang::Decl> IsBaseClassWithNvDtorMatcher();
+clang::ast_matchers::internal::Matcher<clang::Decl> NoOverrideMatcher();
+clang::ast_matchers::internal::BindableMatcher<clang::Stmt>  NoRefConstVarInRangeLoopMatcher();

@@ -20,8 +20,15 @@ mark_as_advanced(CT_CLANG_PACKAGE_DIR)
 
 # Set this to a valid Clang installation directory. This is most likely where
 # LLVM is installed on your system.
+
 set(CT_Clang_INSTALL_DIR "${CT_CLANG_PACKAGE_DIR}" CACHE PATH
   "Clang installation directory")
+
+#For macOS set manually for now
+#TODO: fix?, CACHE PATH also doesn't work
+IF(APPLE)
+  set(CT_Clang_INSTALL_DIR "/opt/homebrew/opt/llvm")
+ENDIF()
 
 #===============================================================================
 # 1. VERIFY CLANG INSTALLATION DIR

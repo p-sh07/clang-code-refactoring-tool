@@ -1,7 +1,7 @@
-#include <vector>  
+#include <vector>
 #include <string>
 
-class Base {  
+class Base {
 public:  
   virtual void method() = 0;
   ~Base() {}
