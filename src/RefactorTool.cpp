@@ -15,8 +15,6 @@ using namespace clang;
 using namespace clang::ast_matchers;
 using namespace clang::tooling;
 
-static llvm::cl::OptionCategory ToolCategory("refactor-tool options");
-
 // Метод run вызывается для каждого совпадения с матчем. 
 // Мы проверяем тип совпадения по bind-именам и применяем рефакторинг.
 void RefactorHandler::run(const MatchFinder::MatchResult &Result) {
@@ -38,54 +36,93 @@ void RefactorHandler::run(const MatchFinder::MatchResult &Result) {
 }
 
 void RefactorHandler::handle_nv_dtor(const CXXDestructorDecl* Dtor, DiagnosticsEngine &Diag, SourceManager &SM) {
-    if (!Dtor) {
+    if (!Dtor || SM.isInMainFile(Dtor->getLocation())) {
         return;
     }
 
-    // Make sure it is in main file
-    if (!SM.isInMainFile(Dtor->getLocation())) {
+    // Avoid processing the same destructor multiple times
+    unsigned locHash = Dtor->getLocation().getRawEncoding();
+    if (virtualDtorLocations.count(locHash)) {
         return;
     }
+    virtualDtorLocations.insert(locHash);
 
-    // Check that destructor is of base class that has derived classes
+    // Insert "virtual " before the destructor
+    Rewrite.InsertTextBefore(Dtor->getLocation(), "virtual ");
+
+    const unsigned DiagID = Diag.getCustomDiagID(
+            DiagnosticsEngine::Remark,
+            "Деструктор изменен на виртуальный -> virtual"
+        );
+    Diag.Report(Dtor->getLocation(), DiagID);
 
 
     //Find position for inserting virtual kw (before ~)
 }
 
-//todo: необходимо реализовать обработку случая отсутствие override
-void RefactorHandler::handle_miss_override(const CXXMethodDecl *Method,
-                            DiagnosticsEngine &Diag,
-                            SourceManager &SM) {
-    //Реализуйте Ваш код ниже
-    const unsigned DiagID = Diag.getCustomDiagID(
-            DiagnosticsEngine::Remark,
-            "Объявлен метод"
-        );
-    Diag.Report(Method->getLocation(), DiagID);
-}
-
-//todo: необходимо реализовать обработку случая отсутствие & в range-for
-void RefactorHandler::handle_crange_for(const VarDecl *LoopVar,
-                                        DiagnosticsEngine &Diag,
-                                        SourceManager &SM){
-    // Реализуйте Ваш код ниже
-    const unsigned DiagID = Diag.getCustomDiagID(
-            DiagnosticsEngine::Remark,
-            "Объявлена переменная"
-        );
-    Diag.Report(LoopVar->getLocation(), DiagID);
-}
-
-//todo: ниже необходимо реализовать матчеры для поиска узлов AST
-//note: синтаксис написания матчеров точно такой же как и для использования clang-query
-/*
-    Пример того, как может выглядеть реализация:
-    auto AllClassesMatcher()
-    {
-        return cxxRecordDecl().bind("classDecl");
+void RefactorHandler::handle_miss_override(const CXXMethodDecl* Method, DiagnosticsEngine &Diag, SourceManager &SM) {
+    if (!Method || !SM.isInMainFile(Method->getLocation())) {
+        return;
     }
-*/
+
+    // Get the location after the function declarator
+    SourceLocation insertLoc = Lexer::findLocationAfterToken(
+        Method->getEndLoc(),
+        tok::r_paren,
+        SM,
+        Method->getASTContext().getLangOpts(),
+        false
+    );
+
+    if (insertLoc.isValid()) {
+        // Insert " override" after the closing parenthesis
+        Rewrite.InsertTextAfter(insertLoc, " override");
+
+
+        const unsigned DiagID = Diag.getCustomDiagID(
+                DiagnosticsEngine::Remark,
+                "К реализации метода добавлен -> override"
+            );
+        Diag.Report(Method->getLocation(), DiagID);
+    }
+}
+
+void RefactorHandler::handle_crange_for(const VarDecl* LoopVar, DiagnosticsEngine &Diag, SourceManager &SM) {
+    if (!LoopVar || !SM.isInMainFile(LoopVar->getLocation())) {
+        return;
+    }
+
+    QualType varType = LoopVar->getType();
+
+    // Skip if already a reference
+    if (varType->isReferenceType()) {
+        return;
+    }
+
+    // Get the end of the type
+    TypeSourceInfo *TSI = LoopVar->getTypeSourceInfo();
+    if (!TSI) {
+        return;
+    }
+
+    SourceLocation typeEndLoc = TSI->getTypeLoc().getEndLoc();
+
+    // Find the actual end of the type in source (after any spaces/qualifiers)
+    SourceLocation insertLoc = Lexer::getLocForEndOfToken(
+        typeEndLoc, 0, SM, LoopVar->getASTContext().getLangOpts()
+    );
+
+    if (insertLoc.isValid()) {
+        Rewrite.InsertTextAfter(insertLoc, "&");
+
+        const unsigned DiagID = Diag.getCustomDiagID(
+                DiagnosticsEngine::Remark,
+                "Переменная изменена на ref -> &"
+            );
+        Diag.Report(LoopVar->getLocation(), DiagID);
+    }
+}
+
 internal::Matcher<Decl> NvDtorMatcher() {
     //Match any non-v destructor declaration
     return cxxDestructorDecl(
@@ -118,19 +155,6 @@ internal::BindableMatcher<Stmt> NoRefConstVarInRangeLoopMatcher() {
           ).bind(NO_REF_IN_LOOP_TAG)
       )
     );
-
-    // cxxForRangeStmt(
-    //     hasLoopVariable(
-    //         varDecl(
-    //             hasType(
-    //                 qualType(
-    //                     isConstQualified(),
-    //                     unless(referenceType()),
-    //                     unless(builtinType())
-    //                 )
-    //             )).bind(NO_REF_IN_LOOP_TAG)
-    //     )
-    //  );
 }
 
 // Конструктор принимает Rewriter для изменения кода.

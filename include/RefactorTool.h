@@ -61,9 +61,12 @@ private:
 };
 
 //======== Matcher decls to use in tests directly =======
-static constexpr std::string NON_VIRTUAL_DTOR_TAG = "nonVDtor";
-static constexpr std::string MISSING_OVERRIDE_TAG = "missingOverride";
-static constexpr std::string NO_REF_IN_LOOP_TAG   = "loopVar";
+using std::literals::operator ""s;
+static const std::string NON_VIRTUAL_DTOR_TAG = "nonVDtor"s;
+static const std::string MISSING_OVERRIDE_TAG = "missingOverride"s;
+static const std::string NO_REF_IN_LOOP_TAG   = "loopVar"s;
+
+static llvm::cl::OptionCategory ToolCategory("refactor-tool options");
 
 clang::ast_matchers::internal::Matcher<clang::Decl> NvDtorMatcher();
 clang::ast_matchers::internal::Matcher<clang::Decl> IsBaseClassWithNvDtorMatcher();

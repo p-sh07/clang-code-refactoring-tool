@@ -3,6 +3,10 @@
 //
 #include "RefactorTool.h"
 
+using namespace clang;
+using namespace clang::ast_matchers;
+using namespace clang::tooling;
+
 int main(int argc, const char **argv) {
     // Парсер опций: Обрабатывает флаги командной строки, компиляционные базы данных.
     auto ExpectedParser = CommonOptionsParser::create(argc, argv, ToolCategory);
