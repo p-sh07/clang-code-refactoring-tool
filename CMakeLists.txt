@@ -34,51 +34,59 @@ set(CT_Clang_INSTALL_DIR "${CT_CLANG_PACKAGE_DIR}" CACHE PATH
 #For macOS set manually for now
 #TODO: fix?, CACHE PATH also doesn't work
 IF(APPLE)
-  set(CT_Clang_INSTALL_DIR "/opt/homebrew/opt/llvm")
-ENDIF()
+  find_package(LLVM REQUIRED CONFIG)
+  message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+  message(STATUS "LLVM include dir: ${LLVM_INCLUDE_DIRS}")
 
-#===============================================================================
-# 1. VERIFY CLANG INSTALLATION DIR
-#===============================================================================
-set(CT_LLVM_INCLUDE_DIR "${CT_Clang_INSTALL_DIR}/include/llvm")
-if(NOT EXISTS "${CT_LLVM_INCLUDE_DIR}")
-message(FATAL_ERROR
-  " CT_Clang_INSTALL_DIR (${CT_LLVM_INCLUDE_DIR}) is invalid.")
-endif()
+  # Include necessary directories.
+  # The find_package(LLVM) command sets these variables.
+  include_directories(${LLVM_INCLUDE_DIRS})
+  link_directories(${LLVM_LIBRARY_DIRS})
+  add_definitions(${LLVM_DEFINITIONS})
+ELSE()
 
-set(CT_LLVM_CMAKE_FILE
-  "${CT_Clang_INSTALL_DIR}/lib/cmake/clang/ClangConfig.cmake")
-if(NOT EXISTS "${CT_LLVM_CMAKE_FILE}")
-message(FATAL_ERROR
-  " CT_LLVM_CMAKE_FILE (${CT_LLVM_CMAKE_FILE}) is invalid.")
-endif()
+  #===============================================================================
+  # 1. VERIFY CLANG INSTALLATION DIR
+  #===============================================================================
+  set(CT_LLVM_INCLUDE_DIR "${CT_Clang_INSTALL_DIR}/include/llvm")
+  if(NOT EXISTS "${CT_LLVM_INCLUDE_DIR}")
+    message(FATAL_ERROR
+            " CT_Clang_INSTALL_DIR (${CT_LLVM_INCLUDE_DIR}) is invalid.")
+  endif()
 
-#===============================================================================
-# 2. LOAD CLANG CONFIGURATION
-#    Extracted from:
-#    http://llvm.org/docs/CMake.html#embedding-llvm-in-your-project
-#===============================================================================
-list(APPEND CMAKE_PREFIX_PATH "${CT_Clang_INSTALL_DIR}/lib/cmake/clang/")
+  set(CT_LLVM_CMAKE_FILE
+          "${CT_Clang_INSTALL_DIR}/lib/cmake/clang/ClangConfig.cmake")
+  if(NOT EXISTS "${CT_LLVM_CMAKE_FILE}")
+    message(FATAL_ERROR
+            " CT_LLVM_CMAKE_FILE (${CT_LLVM_CMAKE_FILE}) is invalid.")
+  endif()
+ENDIF ()
+  #===============================================================================
+  # 2. LOAD CLANG CONFIGURATION
+  #    Extracted from:
+  #    http://llvm.org/docs/CMake.html#embedding-llvm-in-your-project
+  #===============================================================================
+  list(APPEND CMAKE_PREFIX_PATH "${CT_Clang_INSTALL_DIR}/lib/cmake/clang/")
 
-find_package(Clang REQUIRED CONFIG)
+  find_package(Clang REQUIRED CONFIG)
 
-# Sanity check. As Clang does not expose e.g. `CLANG_VERSION_MAJOR` through
-# AddClang.cmake, we have to use LLVM_VERSION_MAJOR instead.
-# TODO: Revisit when next version is released.
-if("${LLVM_VERSION_MAJOR}" VERSION_LESS 19)
-  message(FATAL_ERROR "Found LLVM ${LLVM_VERSION_MAJOR}, but need LLVM 19 or above")
-endif()
+  # Sanity check. As Clang does not expose e.g. `CLANG_VERSION_MAJOR` through
+  # AddClang.cmake, we have to use LLVM_VERSION_MAJOR instead.
+  # TODO: Revisit when next version is released.
+  if("${LLVM_VERSION_MAJOR}" VERSION_LESS 19)
+    message(FATAL_ERROR "Found LLVM ${LLVM_VERSION_MAJOR}, but need LLVM 19 or above")
+  endif()
 
-message(STATUS "Found Clang ${LLVM_PACKAGE_VERSION}")
-message(STATUS "Using ClangConfig.cmake in: ${CT_Clang_INSTALL_DIR}")
+  message(STATUS "Found Clang ${LLVM_PACKAGE_VERSION}")
+  message(STATUS "Using ClangConfig.cmake in: ${CT_Clang_INSTALL_DIR}")
 
-message("CLANG STATUS:
+  message("CLANG STATUS:
   Includes (clang)    ${CLANG_INCLUDE_DIRS}
   Includes (llvm)     ${LLVM_INCLUDE_DIRS}"
-)
+  )
 
-# Set the LLVM and Clang header and library paths
-include_directories(SYSTEM "${LLVM_INCLUDE_DIRS};${CLANG_INCLUDE_DIRS}")
+  # Set the LLVM and Clang header and library paths
+  include_directories(SYSTEM "${LLVM_INCLUDE_DIRS};${CLANG_INCLUDE_DIRS}")
 
 #===============================================================================
 # 3. CLANG-TUTOR BUILD CONFIGURATION
