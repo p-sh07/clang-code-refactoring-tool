@@ -12,9 +12,10 @@ namespace fs = std::filesystem;
 
 // Helper class to manage test lifecycle
 class RefactorToolTest : public testing::TestWithParam<std::string> {
+    const bool remove_temp_dir_after_test_ = false;
     const fs::path refactor_tool_path = fs::current_path() / "refactor_tool";
-    const fs::path temp_dir_ = fs::current_path() / "refactor_test_temp";
     const fs::path test_files_path_ = fs::current_path().parent_path() / "tests" / "tests_data";
+    const fs::path temp_dir_ = test_files_path_.parent_path() / "refactor_test_temp";
     const std::string ref_file_suffix_ = "_ref";
 
     // Helper: check if char is whitespace (space, tab, newline, etc.)
@@ -54,14 +55,16 @@ protected:
             << "]\n\t-refactor_tool=[" << refactor_tool_path << "]\n";
 
         // Set up temp directory
-        if (!fs::exists(temp_dir_)) {
-            fs::create_directories(temp_dir_);
-            std::cerr << "->created temp_dir successfully" << std::endl;
-        }
+        if (fs::exists(temp_dir_)) {
+            std::cerr << "->removing previous test files" << std::endl;
+            fs::remove_all(temp_dir_);
+        } 
+        fs::create_directories(temp_dir_);
+        std::cerr << "->created temp_dir successfully" << std::endl;
     }
 
     void TearDown() override {
-        if (fs::exists(temp_dir_)) {
+        if (remove_temp_dir_after_test_ && fs::exists(temp_dir_)) {
             fs::remove_all(temp_dir_);
         }
     }
@@ -131,7 +134,7 @@ TEST_P(RefactorToolTest, CheckCorrectRefactor) {
 
 // Generate test cases: one per .cpp file in tests/tests_data/
 INSTANTIATE_TEST_SUITE_P(CheckCorrectRefactor, RefactorToolTest, ::testing::Values(
-    "for_refactor.cpp",
+    "for_refactor.cpp"
     "test1.cpp",
     "test2.cpp",
     "test3.cpp"

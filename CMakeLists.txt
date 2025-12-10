@@ -28,8 +28,7 @@ mark_as_advanced(CT_CLANG_PACKAGE_DIR)
 # Set this to a valid Clang installation directory. This is most likely where
 # LLVM is installed on your system.
 
-set(CT_Clang_INSTALL_DIR "${CT_CLANG_PACKAGE_DIR}" CACHE PATH
-  "Clang installation directory")
+set(CT_Clang_INSTALL_DIR "/usr/lib/llvm-20")
 
 #For macOS set manually for now
 #TODO: fix?, CACHE PATH also doesn't work
@@ -127,7 +126,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
 # Doing this at the end so that all definitions and link/include paths are
 # available for the sub-projects.
 #===============================================================================
+
+enable_testing()
+
 add_subdirectory(tests)
 add_subdirectory(src)
-
-

@@ -41,8 +41,8 @@ set_target_properties(${PROJECT_NAME}_tests PROPERTIES
 target_link_libraries(
         refactor_tool_tests
         PRIVATE
-        gmock
-        gmock_main
+        # gmock
+        # gmock_main
         GTest::gtest
         GTest::gtest_main
         # Clang libraries
@@ -65,4 +65,4 @@ target_include_directories(${PROJECT_NAME}_tests PRIVATE
 )
 
 include(GoogleTest)
-gtest_discover_tests(refactor_tool_tests)
+gtest_discover_tests(${PROJECT_NAME}_tests)

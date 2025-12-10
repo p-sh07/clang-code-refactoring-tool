@@ -123,6 +123,7 @@ void RefactorHandler::handle_crange_for(const VarDecl* LoopVar, DiagnosticsEngin
 internal::Matcher<Decl> NvDtorMatcher() {
     //Match any non-v destructor declaration
     return cxxDestructorDecl(
+        isExpansionInMainFile(),
         isDefinition(),
         unless(isImplicit()),
         unless(isVirtual())
@@ -131,12 +132,14 @@ internal::Matcher<Decl> NvDtorMatcher() {
 
 internal::Matcher<Decl> IsBaseClassWithNvDtorMatcher() {
     return cxxRecordDecl(
+        isExpansionInMainFile(),
         hasDirectBase(hasType(cxxRecordDecl(has(NvDtorMatcher()))))
     );
 }
 
 internal::Matcher<Decl> NoOverrideMatcher() {
     return cxxMethodDecl(
+        isExpansionInMainFile(),
         isOverride(),
         unless(hasAttr(attr::Override))
     ).bind(MISSING_OVERRIDE_TAG);
