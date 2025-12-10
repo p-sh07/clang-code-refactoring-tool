@@ -8,8 +8,8 @@ public:
 };   
 
 class Derived : public Base {  
-public:  
-  virtual void method() {};
+public:
+  void method() {};
   virtual ~Derived() {} 
 };
 

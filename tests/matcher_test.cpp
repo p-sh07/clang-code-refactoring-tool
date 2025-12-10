@@ -7,14 +7,14 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Tooling/Tooling.h"
-#include "../include/RefactorTool.h"
+#include "RefactorTool.h"
 
 namespace fs = std::filesystem;
 using namespace clang;
 using namespace clang::ast_matchers;
 using namespace clang::tooling;
 
-//====== Matcher Test Suite
+//====== Matcher Test Suite ========
 class MatcherTest : public testing::TestWithParam<std::tuple<std::string, std::string, int>> {
 protected:
     int MatchAndGetCount(const std::string& code, std::string node_tag) {
@@ -63,7 +63,8 @@ TEST_P(MatcherTest, CheckCorrectASTMatching) {
 INSTANTIATE_TEST_SUITE_P(
     CheckCorrectASTMatching, MatcherTest, ::testing::Values(
         //Virtual destructor
-        std::make_tuple(R"(class Base {
+        std::make_tuple(R"(
+        class Base {
         public:
             ~Base() {}
         };
@@ -72,7 +73,8 @@ INSTANTIATE_TEST_SUITE_P(
             ~Derived() {}
         }; )", NON_VIRTUAL_DTOR_TAG, 1),
 
-        std::make_tuple(R"(class Base {
+        std::make_tuple(R"(
+        class Base {
         public:
             virtual ~Base() {}
         };
@@ -82,7 +84,8 @@ INSTANTIATE_TEST_SUITE_P(
         }; )", NON_VIRTUAL_DTOR_TAG, 0),
 
         //Missing Override
-        std::make_tuple(R"(class Base {
+        std::make_tuple(R"(
+        class Base {
         public:
             virtual void method1() {}
             virtual void method2() {}
@@ -94,18 +97,20 @@ INSTANTIATE_TEST_SUITE_P(
             void method2() {}
         };)", MISSING_OVERRIDE_TAG, 1),
 
-        std::make_tuple(R"(class Base {
+        std::make_tuple(R"(
+        class Base {
         public:
             virtual void method() {}
             virtual ~Base() {}
         };
         class Derived : public Base {
         public:
-            void method() {}
-        };)", MISSING_OVERRIDE_TAG, 1),
+            void method() override {}
+        };)", MISSING_OVERRIDE_TAG, 0),
 
         //No ref
-        std::make_tuple(R"(struct MyObject {
+        std::make_tuple(R"(
+        struct MyObject {
             int data[100];
         };
         struct Container {
@@ -121,7 +126,8 @@ INSTANTIATE_TEST_SUITE_P(
             }
         })", NO_REF_IN_LOOP_TAG, 1),
 
-        std::make_tuple(R"(struct MyObject {
+        std::make_tuple(R"(
+        struct MyObject {
            int data[100];
         };
         struct Container {
@@ -135,5 +141,3 @@ INSTANTIATE_TEST_SUITE_P(
            }
        })", NO_REF_IN_LOOP_TAG, 0)
 ));
-
-

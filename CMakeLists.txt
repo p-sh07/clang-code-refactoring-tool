@@ -1,6 +1,13 @@
 cmake_minimum_required(VERSION 3.20)
 project(clang-tutor)
 
+#set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# FORCE C++17 before anything else - CRITICAL for LLVM compatibility
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 #===============================================================================
 # 0. GET CLANG INSTALLATION DIR
 #===============================================================================

@@ -55,9 +55,6 @@ void RefactorHandler::handle_nv_dtor(const CXXDestructorDecl* Dtor, DiagnosticsE
             "Деструктор изменен на виртуальный -> virtual"
         );
     Diag.Report(Dtor->getLocation(), DiagID);
-
-
-    //Find position for inserting virtual kw (before ~)
 }
 
 void RefactorHandler::handle_miss_override(const CXXMethodDecl* Method, DiagnosticsEngine &Diag, SourceManager &SM) {
@@ -146,6 +143,7 @@ internal::Matcher<Decl> NoOverrideMatcher() {
 }
 
 internal::BindableMatcher<Stmt> NoRefConstVarInRangeLoopMatcher() {
+//return cxxForRangeStmt(hasLoopVariable(varDecl(hasType(isConstQualified())).bind(NO_REF_IN_LOOP_TAG)));
     return cxxForRangeStmt(
       hasLoopVariable(
           varDecl(
