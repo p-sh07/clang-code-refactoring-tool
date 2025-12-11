@@ -2,7 +2,7 @@
 
 class Base {
 public:
-    virtual ~Base() {}  // Невиртуальный
+    ~Base() {}  // Невиртуальный
 };
 
 class Derived : public Base {
@@ -16,5 +16,6 @@ private:
 int main() {
     Base* obj = new Derived();
     delete obj;  // Утечка, т.к. вызывается деструктор Base, а не Derived
+    std::cout << "Program finished successfully" << std::endl;
     return 0;
 }

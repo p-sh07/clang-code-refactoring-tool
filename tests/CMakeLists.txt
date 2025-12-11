@@ -1,14 +1,6 @@
 cmake_minimum_required(VERSION 3.30)
 project(refactor_tool VERSION 1.0.0 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    add_compile_options(-Wfatal-errors)
-endif()
-
 #----------------------------------------------------------------------------------------------------------------------
 # testing framework
 #----------------------------------------------------------------------------------------------------------------------
@@ -32,10 +24,45 @@ FetchContent_MakeAvailable(googletest)
 # Рекурсивно ищем все используемые в тестах .cpp файлы
 file(GLOB TEST_SRC_FILES "${CMAKE_SOURCE_DIR}/tests/*.cpp")
 
-add_executable(${PROJECT_NAME}_tests "${TEST_SRC_FILES}")
-target_link_libraries(${PROJECT_NAME}_tests PRIVATE gtest_main)
-target_include_directories(${PROJECT_NAME}_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+add_executable(${PROJECT_NAME}_tests
+        "${CMAKE_SOURCE_DIR}/src/RefactorTool.cpp"
+        "${TEST_SRC_FILES}"
+)
 
+# Force C++17 standard (same as LLVM)
+set_target_properties(${PROJECT_NAME}_tests PROPERTIES
+        CXX_STANDARD 17
+        CXX_STANDARD_REQUIRED ON
+        CXX_EXTENSIONS OFF
+)
+
+#target_link_libraries(${PROJECT_NAME}_tests PRIVATE gtest_main)
+#TODO: didn't compile without these
+target_link_libraries(
+        refactor_tool_tests
+        PRIVATE
+        # gmock
+        # gmock_main
+        GTest::gtest
+        GTest::gtest_main
+        # Clang libraries
+        clangTooling
+        clangFrontend
+        clangASTMatchers
+        clangAST
+        clangBasic
+        clangLex
+        clangRewrite
+        clangSerialization
+        clangDriver
+        clangParse
+        clangSema
+)
+
+target_include_directories(${PROJECT_NAME}_tests PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/include
+)
 
 include(GoogleTest)
-gtest_discover_tests(refactor_tool_tests)
+gtest_discover_tests(${PROJECT_NAME}_tests)
