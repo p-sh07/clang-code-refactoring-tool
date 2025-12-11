@@ -8,6 +8,14 @@ using namespace clang::ast_matchers;
 using namespace clang::tooling;
 
 int main(int argc, const char **argv) {
+    // Add log file option
+    static llvm::cl::opt<std::string> logFile(
+        "log-file",
+        llvm::cl::desc("Path to log file for recording changes"),
+        llvm::cl::value_desc("filename"),
+        llvm::cl::init("")
+    );
+
     // Парсер опций: Обрабатывает флаги командной строки, компиляционные базы данных.
     auto ExpectedParser = CommonOptionsParser::create(argc, argv, ToolCategory);
     if (!ExpectedParser) {
@@ -18,5 +26,6 @@ int main(int argc, const char **argv) {
     // Создаем ClangTool
     ClangTool Tool(OptionsParser.getCompilations(), OptionsParser.getSourcePathList());
     // Запускаем RefactorAction.
-    return Tool.run(newFrontendActionFactory<CodeRefactorAction>().get());
+    auto factory = std::make_unique<CodeRefactorActionFactory>(logFile);
+    return Tool.run(factory.get());
 }

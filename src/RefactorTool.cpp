@@ -39,16 +39,19 @@ void RefactorHandler::handle_nv_dtor(const CXXDestructorDecl* Dtor, DiagnosticsE
     if (!Dtor || SM.isInMainFile(Dtor->getLocation())) {
         return;
     }
+    auto DtorLoc = Dtor->getLocation();
 
     // Avoid processing the same destructor multiple times
-    unsigned locHash = Dtor->getLocation().getRawEncoding();
+    unsigned locHash = DtorLoc.getRawEncoding();
     if (virtualDtorLocations.count(locHash)) {
         return;
     }
     virtualDtorLocations.insert(locHash);
 
     // Insert "virtual " before the destructor
-    Rewrite.InsertTextBefore(Dtor->getLocation(), "virtual ");
+    std::string text = "virtual ";
+    Rewrite.InsertTextBefore(DtorLoc, text);
+    LogInsertion(SM, DtorLoc, text);
 
     const unsigned DiagID = Diag.getCustomDiagID(
             DiagnosticsEngine::Remark,
@@ -73,8 +76,9 @@ void RefactorHandler::handle_miss_override(const CXXMethodDecl* Method, Diagnost
 
     if (insertLoc.isValid()) {
         // Insert " override" after the closing parenthesis
+        std::string text = " override";
         Rewrite.InsertTextAfter(insertLoc, " override");
-
+        LogInsertion(SM, insertLoc, text);
 
         const unsigned DiagID = Diag.getCustomDiagID(
                 DiagnosticsEngine::Remark,
@@ -110,7 +114,9 @@ void RefactorHandler::handle_crange_for(const VarDecl* LoopVar, DiagnosticsEngin
     );
 
     if (insertLoc.isValid()) {
-        Rewrite.InsertTextAfter(insertLoc, "&");
+        std::string text = "&";
+        Rewrite.InsertTextAfter(insertLoc, text);
+        LogInsertion(SM, insertLoc, text);
 
         const unsigned DiagID = Diag.getCustomDiagID(
                 DiagnosticsEngine::Remark,
@@ -159,7 +165,8 @@ internal::BindableMatcher<Stmt> NoRefConstVarInRangeLoopMatcher() {
 }
 
 // Конструктор принимает Rewriter для изменения кода.
-ComplexConsumer::ComplexConsumer(Rewriter &Rewrite) : Handler(Rewrite) {
+ComplexConsumer::ComplexConsumer(Rewriter &Rewrite, const std::string& logPath)
+: Handler(Rewrite, logPath) {
     // Создаем MatchFinder и добавляем матчеры.
     Finder.addMatcher(NvDtorMatcher(), &Handler);
     Finder.addMatcher(NoOverrideMatcher(), &Handler);
@@ -167,16 +174,14 @@ ComplexConsumer::ComplexConsumer(Rewriter &Rewrite) : Handler(Rewrite) {
 }
 
 // Метод HandleTranslationUnit вызывается для каждого файла.
-void ComplexConsumer::HandleTranslationUnit(ASTContext &Context) {
-    Finder.matchAST(Context);
-}
+void ComplexConsumer::HandleTranslationUnit(ASTContext &Context) { Finder.matchAST(Context); }
 
-
+CodeRefactorAction::CodeRefactorAction(const std::string &logPath) : logPath(logPath) {}
 std::unique_ptr<ASTConsumer> CodeRefactorAction::CreateASTConsumer(CompilerInstance &CI,
                                                 StringRef file) {
     RewriterForCodeRefactor.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
     return std::make_unique<ComplexConsumer>(
-        RewriterForCodeRefactor);
+        RewriterForCodeRefactor, logPath);
 }
 
 bool CodeRefactorAction::BeginSourceFileAction( CompilerInstance &CI) {
