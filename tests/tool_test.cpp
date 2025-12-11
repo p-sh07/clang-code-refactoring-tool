@@ -134,7 +134,7 @@ TEST_P(RefactorToolTest, CheckCorrectRefactor) {
 
 // Generate test cases: one per .cpp file in tests/tests_data/
 INSTANTIATE_TEST_SUITE_P(CheckCorrectRefactor, RefactorToolTest, ::testing::Values(
-    "for_refactor.cpp"
+    "for_refactor.cpp",
     "test1.cpp",
     "test2.cpp",
     "test3.cpp"

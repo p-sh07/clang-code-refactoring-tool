@@ -147,7 +147,8 @@ internal::Matcher<Decl> NoOverrideMatcher() {
     return cxxMethodDecl(
         isExpansionInMainFile(),
         isOverride(),
-        unless(hasAttr(attr::Override))
+        unless(hasAttr(attr::Override)),
+        unless(cxxDestructorDecl())
     ).bind(MISSING_OVERRIDE_TAG);
 }
 

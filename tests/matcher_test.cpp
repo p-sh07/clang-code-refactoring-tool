@@ -17,40 +17,56 @@ using namespace clang::tooling;
 //====== Matcher Test Suite ========
 class MatcherTest : public testing::TestWithParam<std::tuple<std::string, std::string, int>> {
 protected:
-    int MatchAndGetCount(const std::string& code, std::string node_tag) {
-        CounterCallback<CXXDestructorDecl> callback(node_tag);
+    int MatchAndGetCount(const std::string& code, const std::string& node_tag) {
         MatchFinder finder;
 
-        //TODO: is there a better way?
+        // Use a lambda to capture the count and avoid storing state in the test fixture
+        int count = 0;
+
         if (node_tag == NON_VIRTUAL_DTOR_TAG) {
+            // Match CXXDestructorDecl (nvdtor)
+            auto callback = CounterCallback<CXXDestructorDecl>(counter_, node_tag);
             finder.addMatcher(IsBaseClassWithNvDtorMatcher(), &callback);
         }
         else if (node_tag == MISSING_OVERRIDE_TAG) {
+            // Match CXXMethodDecl with override (or lack thereof)
+            auto callback = CounterCallback<CXXMethodDecl>(counter_, node_tag);
             finder.addMatcher(NoOverrideMatcher(), &callback);
         }
         else if (node_tag == NO_REF_IN_LOOP_TAG) {
+            // Match VarDecl with non-const reference type in range loop
+            auto callback = CounterCallback<VarDecl>(counter_, node_tag);
+            finder.addMatcher(IsBaseClassWithNvDtorMatcher(), &callback);
             finder.addMatcher(NoRefConstVarInRangeLoopMatcher(), &callback);
+        }
+        else {
+            return -1;
         }
 
         auto factory = newFrontendActionFactory(&finder);
         runToolOnCode(factory->create(), code);
 
-        return callback.get_count();
+        return counter_;
     }
 
 private:
+    int counter_ = 0;
+
     template <typename NodeType>
     class CounterCallback : public MatchFinder::MatchCallback {
     public:
-        explicit CounterCallback(std::string tag) : match_tag_(tag) {}
+        explicit CounterCallback(int& counter_ref_, std::string tag)
+            : count_(counter_ref_)
+            , match_tag_(tag)
+        {}
+
         void run(const MatchFinder::MatchResult &Result) override {
             if (Result.Nodes.getNodeAs<NodeType>(match_tag_)) {
                 count_++;
             }
         }
-        int get_count() const { return count_; }
     private:
-        int count_ = 0;
+        int& count_;
         std::string match_tag_;
     };
 };
