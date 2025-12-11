@@ -18,8 +18,7 @@ public:
         if (!log_file_name_.empty()) {
             logFile.open(log_file_name_, std::ios::app);
             if (logFile.is_open()) {
-                logFile << "=== Refactor Log (UTC: " << std::put_time(std::gmtime(nullptr), "%Y-%m-%d %H:%M:%S")
-                          << ") ===\n";
+                logFile << "=== Refactor Log Session Start ===\n";
                 logEnabled = true;
             }
         }
